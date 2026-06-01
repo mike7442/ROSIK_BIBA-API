@@ -1,7 +1,7 @@
 import socket
 
 # Задаем адрес сервера
-SERVER_ADDRESS = ('localhost', 8686)
+SERVER_ADDRESS = ('192.168.0.221', 31415)
 
 # Настраиваем сокет
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
