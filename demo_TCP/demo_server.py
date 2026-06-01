@@ -1,28 +1,22 @@
 import socket
 
-# Создаём сокет
+# Задаем адрес сервера
+SERVER_ADDRESS = ('localhost', 8686)
+
+# Настраиваем сокет
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(SERVER_ADDRESS)
+server_socket.listen(10)
+print('server is running, please, press ctrl+c to stop')
 
-# Привязываем сокет к адресу и порту
-server_socket.bind(('192.168.0.221', 31415))
-
-# Начинаем прослушивать входящие соединения
-server_socket.listen(1)
-
-print("Сервер запущен на порту 31415...")
-
+# Слушаем запросы
 while True:
-    # Принимаем соединение от клиента
-    client_connection, client_address = server_socket.accept()
-    print(f'Подключение от {client_address}')
+    connection, address = server_socket.accept()
+    print("new connection from {address}".format(address=address))
 
-    # Получаем сообщение от клиента
-    request = client_connection.recv(1024).decode()
-    print(f'Запрос от клиента: {request}')
+    data = connection.recv(1024)
+    print(str(data))
 
-    # Отправляем ответ клиенту
-    response = 'Привет от сервера!'
-    client_connection.sendall(response.encode())
+    connection.send(bytes('Hello from server!', encoding='UTF-8'))
 
-    # Закрываем соединение
-    client_connection.close()
+    connection.close()
