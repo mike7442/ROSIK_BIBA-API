@@ -1,9 +1,10 @@
 import struct
+import random # Для генерации тестовых значений
 
 # --- Конфигурация протокола ---
-ORDER = '<'  # Порядок байтов (Little-Endian)
+ORDER = '>'  # Порядок байтов (Big-Endian)
 HEADER_VALUE = 0xDEAD # Значение стартовых 2 байт
-MESSAGE_FORMAT = f'{ORDER}HffHHHHHHHHHHHHHHHHHHHHBHBBBBBBBBBB' # Формат сообщения (46 байт)
+MESSAGE_FORMAT = f'{ORDER}HffHHHHHHHHHHHHHBBBBBBBBBB' # Формат сообщения (46 байт)
 MESSAGE_LENGTH = struct.calcsize(MESSAGE_FORMAT) # Вычисляем длину: 46 байт
 # ------------------------------
 
@@ -103,3 +104,78 @@ def unpack_message(data):
         'lift_height': lift_height,
         'reserved': reserved
     }
+
+
+# --- Тестирование ---
+if __name__ == "__main__":
+    print(f"Calculated MESSAGE_LENGTH: {MESSAGE_LENGTH}") # Печатаем вычисленную длину
+    print("--- Тестирование протокола ---")
+    # Примерные значения для теста
+    test_values = {
+        "linear_speed": 1.5,
+        "angular_speed": -0.8,
+        "servo_positions": [random.randint(0, 65535) for _ in range(12)], # Случайные значения
+        "lift_height": 32000,
+        "reserved_bytes": [random.randint(0, 255) for _ in range(10)] # Случайные байты
+    }
+
+    print("Исходные данные:")
+    for key, value in test_values.items():
+        print(f"  {key}: {value}")
+
+    # Упаковка
+    print("\n--- Упаковка ---")
+    packed = pack_message(
+        test_values["linear_speed"],
+        test_values["angular_speed"],
+        test_values["servo_positions"],
+        test_values["lift_height"],
+        test_values["reserved_bytes"]
+    )
+
+    if packed is not None:
+        print(f"Упакованное сообщение ({len(packed)} байт): {packed}")
+        print(f"Заголовок (первые 2 байта): 0x{packed[0]:02X} 0x{packed[1]:02X}")
+    else:
+        print("Упаковка не удалась!")
+        exit(1) # Завершаем тест, если упаковка не прошла
+
+    # Распаковка
+    print("\n--- Распаковка ---")
+    unpacked_result = unpack_message(packed)
+
+    if unpacked_result is not None:
+        print("Распакованные данные:")
+        for key, value in unpacked_result.items():
+            print(f"  {key}: {value}")
+
+        # Сравнение
+        print("\n--- Сравнение ---")
+        success = True
+        # --- Сравнение float с допустимой погрешностью ---
+        epsilon = 1e-6 # Маленькое число - допустимая разница
+        if abs(test_values["linear_speed"] - unpacked_result["linear_speed"]) > epsilon:
+            print(f"Mismatch: linear_speed {test_values['linear_speed']} != {unpacked_result['linear_speed']} (diff > {epsilon})")
+            success = False
+        if abs(test_values["angular_speed"] - unpacked_result["angular_speed"]) > epsilon:
+            print(f"Mismatch: angular_speed {test_values['angular_speed']} != {unpacked_result['angular_speed']} (diff > {epsilon})")
+            success = False
+        # ---------------------------------------------------
+        # Остальные типы сравниваются напрямую
+        if test_values["servo_positions"] != unpacked_result["servo_positions"]:
+            print(f"Mismatch: servo_positions {test_values['servo_positions']} != {unpacked_result['servo_positions']}")
+            success = False
+        if test_values["lift_height"] != unpacked_result["lift_height"]:
+            print(f"Mismatch: lift_height {test_values['lift_height']} != {unpacked_result['lift_height']}")
+            success = False
+        if test_values["reserved_bytes"] != unpacked_result["reserved"]:
+            print(f"Mismatch: reserved_bytes {test_values['reserved_bytes']} != {unpacked_result['reserved']}")
+            success = False
+
+        if success:
+            print("OK: Все данные совпали после упаковки и распаковки!")
+        else:
+            print("FAIL: Данные не совпали!")
+    else:
+        print("Распаковка не удалась!")
+
